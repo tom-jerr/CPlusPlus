@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -60,6 +62,8 @@ class ORSet {
 
  private:
   // TODO(student): Add your private memeber variables to represent ORSet.
+  std::set<std::map<T, uid_t>> add_set_;
+  std::set<std::map<T, uid_t>> remove_set_;
 };
 
 }  // namespace bustub

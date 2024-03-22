@@ -2,7 +2,7 @@
 # This file specifies intentionally untracked files that git should ignore.
 #==============================================================================#
 /GRADESCOPE.md
-
+/build
 #==============================================================================#
 # File extensions to be ignored anywhere in the tree.
 #==============================================================================#
@@ -18,7 +18,7 @@
 .*.sw?
 .sw?
 # vscode settings directory
-.vscode
+# .vscode
 #OS X specific files.
 .DS_store
 # Core files

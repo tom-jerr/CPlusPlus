@@ -8,6 +8,23 @@
 #include "primer/orset_driver.h"
 
 namespace bustub {
+// TEST(ORSetTest, ElementsTest) {
+//   auto orset_a = ORSet<int>();
+//   auto orset_b = ORSet<int>();
+//   orset_a.Add(1, 0);
+//   orset_a.Add(2, 1);
+//   orset_a.Add(1, 2);
+
+//   orset_b.Add(2,3);
+//   orset_b.Remove(2);
+//   orset_a.Merge(orset_b);
+
+//   std::string result_a = orset_a.ToString();
+//   std::string result_b = orset_b.ToString();
+//   std::cout << "result_a:\t" <<result_a << std::endl;
+//   std::cout << "result_b:\t" <<result_b << std::endl;
+
+// }
 
 TEST(ORSetTest, AddRemoveTest) {
   const int n = 10;
