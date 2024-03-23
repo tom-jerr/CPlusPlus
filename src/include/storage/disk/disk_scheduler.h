@@ -51,9 +51,10 @@ struct DiskRequest {
  */
 class DiskScheduler {
  public:
-  explicit DiskScheduler(DiskManager *disk_manager);
+  explicit DiskScheduler(DiskManager *disk_manager, int num_workers = 1);
   ~DiskScheduler();
 
+  using RequestQueue = Channel<std::optional<DiskRequest>>;
   /**
    * TODO(P1): Add implementation
    *
@@ -71,7 +72,7 @@ class DiskScheduler {
    * The background thread needs to process requests while the DiskScheduler exists, i.e., this function should not
    * return until ~DiskScheduler() is called. At that point you need to make sure that the function does return.
    */
-  void StartWorkerThread();
+  void StartWorkerThread(size_t thread_id);
 
   using DiskSchedulerPromise = std::promise<bool>;
 
@@ -83,13 +84,22 @@ class DiskScheduler {
    */
   auto CreatePromise() -> DiskSchedulerPromise { return {}; };
 
+  /**
+   * @brief Hashes a page_id to a worker thread.
+   * @param page_id The page_id to hash.
+   * @return The worker thread to which the page_id is hashed.
+   */
+  auto Hash(page_id_t page_id) -> size_t { return page_id % num_workers_; }
+
  private:
   /** Pointer to the disk manager. */
-  DiskManager *disk_manager_ __attribute__((__unused__));
+  DiskManager *disk_manager_;
+  // 使用线程池加快磁盘任务处理速度
+  size_t num_workers_;
   /** A shared queue to concurrently schedule and process requests. When the DiskScheduler's destructor is called,
    * `std::nullopt` is put into the queue to signal to the background thread to stop execution. */
-  Channel<std::optional<DiskRequest>> request_queue_;
+  std::vector<RequestQueue> request_queue_;
   /** The background thread responsible for issuing scheduled requests to the disk manager. */
-  std::optional<std::thread> background_thread_;
+  std::vector<std::thread> background_thread_;
 };
 }  // namespace bustub
