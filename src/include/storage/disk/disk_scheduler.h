@@ -51,7 +51,7 @@ struct DiskRequest {
  */
 class DiskScheduler {
  public:
-  explicit DiskScheduler(DiskManager *disk_manager, int num_workers = 1);
+  explicit DiskScheduler(DiskManager *disk_manager, int num_workers = 32);
   ~DiskScheduler();
 
   using RequestQueue = Channel<std::optional<DiskRequest>>;

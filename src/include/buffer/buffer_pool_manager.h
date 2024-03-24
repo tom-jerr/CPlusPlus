@@ -173,6 +173,13 @@ class BufferPoolManager {
    */
   auto DeletePage(page_id_t page_id) -> bool;
 
+  /**
+   * @brief 对需要驱逐的页进行处理
+   * @param page_id id of page to be evicted
+   * @return bool
+   */
+  auto PostProcessPage(page_id_t page_id, bool flush) -> bool;
+
  private:
   /** Number of pages in the buffer pool. */
   const size_t pool_size_;
