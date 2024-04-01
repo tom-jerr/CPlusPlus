@@ -15,6 +15,7 @@
 #include <list>
 #include <memory>
 #include <mutex>  // NOLINT
+#include <shared_mutex>
 #include <unordered_map>
 
 #include "buffer/lru_k_replacer.h"
@@ -173,13 +174,6 @@ class BufferPoolManager {
    */
   auto DeletePage(page_id_t page_id) -> bool;
 
-  /**
-   * @brief 对需要驱逐的页进行处理
-   * @param page_id id of page to be evicted
-   * @return bool
-   */
-  auto PostProcessPage(page_id_t page_id, bool flush) -> bool;
-
  private:
   /** Number of pages in the buffer pool. */
   const size_t pool_size_;
@@ -200,6 +194,8 @@ class BufferPoolManager {
   std::list<frame_id_t> free_list_;
   /** This latch protects shared data structures. We recommend updating this comment to describe what it protects. */
   std::mutex latch_;
+  // std::shared_mutex page_table_latch_;
+  // std::vector<std::mutex> page_latches_;
   /** This buffer is for the leaderboard task. You may want to use it to optimize the write requests. */
   WriteBackCache write_back_cache_ __attribute__((__unused__));
 
@@ -218,5 +214,9 @@ class BufferPoolManager {
   }
 
   // TODO(student): You may add additional private members and helper functions
+  auto GetFreeFid() -> frame_id_t;
+  auto InitNewPage(page_id_t pid, frame_id_t fid) -> void;
+  auto FlushFrame(page_id_t pid, frame_id_t fid) -> bool;
+  auto AccessLRUK(frame_id_t fid) -> void;
 };
 }  // namespace bustub
