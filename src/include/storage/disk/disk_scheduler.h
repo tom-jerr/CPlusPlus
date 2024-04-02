@@ -15,8 +15,10 @@
 #include <future>  // NOLINT
 #include <optional>
 #include <thread>  // NOLINT
+#include <unordered_map>
 
 #include "common/channel.h"
+#include "common/config.h"
 #include "storage/disk/disk_manager.h"
 
 namespace bustub {

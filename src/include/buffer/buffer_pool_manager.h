@@ -183,7 +183,7 @@ class BufferPoolManager {
   /** Array of buffer pool pages. */
   Page *pages_;
   /** Pointer to the disk sheduler. */
-  std::unique_ptr<DiskScheduler> disk_scheduler_ __attribute__((__unused__));
+  std::unique_ptr<DiskScheduler> disk_scheduler_;
   /** Pointer to the log manager. Please ignore this for P1. */
   LogManager *log_manager_ __attribute__((__unused__));
   /** Page table for keeping track of buffer pool pages. */
@@ -193,9 +193,9 @@ class BufferPoolManager {
   /** List of free frames that don't have any pages on them. */
   std::list<frame_id_t> free_list_;
   /** This latch protects shared data structures. We recommend updating this comment to describe what it protects. */
-  std::mutex latch_;
-  // std::shared_mutex page_table_latch_;
-  // std::vector<std::mutex> page_latches_;
+  std::mutex free_list_latch_;
+  std::shared_mutex page_table_latch_;
+  std::vector<std::mutex> page_latches_;
   /** This buffer is for the leaderboard task. You may want to use it to optimize the write requests. */
   WriteBackCache write_back_cache_ __attribute__((__unused__));
 
@@ -217,6 +217,7 @@ class BufferPoolManager {
   auto GetFreeFid() -> frame_id_t;
   auto InitNewPage(page_id_t pid, frame_id_t fid) -> void;
   auto FlushFrame(page_id_t pid, frame_id_t fid) -> bool;
+  auto FlushFrame(Page *page) -> bool;
   auto AccessLRUK(frame_id_t fid) -> void;
 };
 }  // namespace bustub

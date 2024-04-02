@@ -14,6 +14,8 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
+#include <vector>
 
 #include "common/config.h"
 #include "common/exception.h"
@@ -32,6 +34,7 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
   // we allocate a consecutive memory space for the buffer pool
   pages_ = new Page[pool_size_];
   replacer_ = std::make_unique<LRUKReplacer>(pool_size, replacer_k);
+  page_latches_ = std::vector<std::mutex>(pool_size_);
   // Initially, every page is in the free list.
   for (size_t i = 0; i < pool_size_; ++i) {
     free_list_.emplace_back(static_cast<int>(i));
@@ -41,26 +44,34 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
 BufferPoolManager::~BufferPoolManager() { delete[] pages_; }
 
 auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
-  std::unique_lock<std::mutex> locker(latch_);
+  std::unique_lock<std::mutex> locker(free_list_latch_);
   // 获取pool中的空闲页面
   frame_id_t fid = GetFreeFid();
   if (fid == -1) {
     return nullptr;
   }
+  std::unique_lock<std::shared_mutex> page_table_lock(page_table_latch_);
+  std::unique_lock<std::mutex> page_lock(page_latches_[fid]);
+
   Page &old_page = pages_[fid];
+
+  page_table_.erase(pages_[fid].page_id_);
+  page_id_t pid = AllocatePage();
+  *page_id = pid;
+  page_table_[pid] = fid;
+  page_table_lock.unlock();
+  locker.unlock();
   // 如果为脏则写回
   if (old_page.IsDirty()) {
     FlushFrame(old_page.page_id_, fid);
   }
-  page_table_.erase(pages_[fid].page_id_);
-  page_id_t pid = AllocatePage();
-  *page_id = pid;
   InitNewPage(pid, fid);
   return pages_ + fid;
 }
 
 auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType access_type) -> Page * {
-  std::unique_lock<std::mutex> locker(latch_);
+  std::unique_lock<std::mutex> locker(free_list_latch_);
+  std::unique_lock<std::shared_mutex> page_table_lock_write(page_table_latch_);
   // 获取pool中的空闲页面
   if (page_table_.count(page_id) != 0U) {
     int fid = page_table_[page_id];
@@ -71,12 +82,17 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
   if (fid == -1) {
     return nullptr;
   }
+  std::unique_lock<std::mutex> page_lock(page_latches_[fid]);
   Page &old_page = pages_[fid];
+
+  page_table_.erase(old_page.page_id_);
+  page_table_[page_id] = fid;
+  // page_table_lock_write.unlock();
+  // locker.unlock();
   // 先写脏页面后读新页面
   if (old_page.IsDirty()) {
     FlushFrame(old_page.page_id_, fid);
   }
-  page_table_.erase(old_page.page_id_);
   InitNewPage(page_id, fid);
 
   DiskRequest request{false, pages_[fid].data_, page_id, disk_scheduler_->CreatePromise()};
@@ -110,18 +126,20 @@ auto BufferPoolManager::InitNewPage(page_id_t pid, frame_id_t fid) -> void {
   page.is_dirty_ = false;
   page.page_id_ = pid;
   page.ResetMemory();
-  page_table_[pid] = fid;
   AccessLRUK(fid);
 }
 
 auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unused]] AccessType access_type) -> bool {
-  std::unique_lock<std::mutex> locker(latch_);
+  // std::unique_lock<std::mutex> locker(free_list_latch_);
+  std::shared_lock<std::shared_mutex> page_table_lock_read(page_table_latch_);
   if (page_table_.count(page_id) == 0) {
     return false;
   }
+  std::unique_lock<std::mutex> page_lock(page_latches_[page_table_[page_id]]);
+  page_table_lock_read.unlock();
   Page &page = pages_[page_table_[page_id]];
   if (!page.is_dirty_) {
-    page.is_dirty_ = is_dirty;
+    page.is_dirty_ |= is_dirty;
   }
   if (page.pin_count_ == 0) {
     return false;
@@ -134,19 +152,25 @@ auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unus
 }
 
 auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
-  std::unique_lock<std::mutex> locker(latch_);
+  // std::unique_lock<std::mutex> locker(free_list_latch_);
+  std::shared_lock<std::shared_mutex> page_table_lock_read(page_table_latch_);
   if (page_table_.count(page_id) == 0) {
     return false;
   }
+  std::unique_lock<std::mutex> page_lock(page_latches_[page_table_[page_id]]);
+  page_table_lock_read.unlock();
   frame_id_t fid = page_table_[page_id];
   return FlushFrame(page_id, fid);
 }
 
 void BufferPoolManager::FlushAllPages() {
-  std::unique_lock<std::mutex> locker(latch_);
+  // std::unique_lock<std::mutex> locker(free_list_latch_);
+
   for (size_t i = 0; i < pool_size_; i++) {
     int pid = pages_[i].GetPageId();
     if (pid != INVALID_PAGE_ID) {
+      std::shared_lock<std::shared_mutex> page_table_lock_read(page_table_latch_);
+      std::unique_lock<std::mutex> page_lock(page_latches_[page_table_[pid]]);
       frame_id_t fid = page_table_[pid];
       FlushFrame(pid, fid);
     }
@@ -165,23 +189,29 @@ auto BufferPoolManager::FlushFrame(page_id_t pid, frame_id_t fid) -> bool {
 }
 
 auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool {
-  std::unique_lock<std::mutex> locker(latch_);
+  std::unique_lock<std::mutex> locker(free_list_latch_);
+  std::unique_lock<std::shared_mutex> page_table_lock_write(page_table_latch_);
   if (page_table_.count(page_id) == 0) {
     return true;
   }
+  std::unique_lock<std::mutex> page_lock(page_latches_[page_table_[page_id]]);
   if (pages_[page_table_[page_id]].pin_count_ != 0) {
     return false;
   }
   frame_id_t fid = page_table_[page_id];
+  replacer_->Remove(fid);
+  free_list_.push_back(fid);
+  page_table_.erase(page_id);
+  DeallocatePage(page_id);
+  page_table_lock_write.unlock();
+  locker.unlock();
+
   Page &page = pages_[fid];
   page.page_id_ = INVALID_PAGE_ID;
   page.is_dirty_ = false;
   page.pin_count_ = 0;
   page.ResetMemory();
-  replacer_->Remove(fid);
-  free_list_.push_back(fid);
-  page_table_.erase(page_id);
-  DeallocatePage(page_id);
+
   return true;
 }
 
