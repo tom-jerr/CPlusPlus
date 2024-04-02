@@ -71,7 +71,7 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
 
 auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType access_type) -> Page * {
   std::unique_lock<std::mutex> locker(free_list_latch_);
-  std::unique_lock<std::shared_mutex> page_table_lock_write(page_table_latch_);
+  std::shared_lock<std::shared_mutex> page_table_lock_read(page_table_latch_);
   // 获取pool中的空闲页面
   if (page_table_.count(page_id) != 0U) {
     int fid = page_table_[page_id];
@@ -82,13 +82,15 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
   if (fid == -1) {
     return nullptr;
   }
+  page_table_lock_read.unlock();
+  std::unique_lock<std::shared_mutex> page_table_lock_write(page_table_latch_);
   std::unique_lock<std::mutex> page_lock(page_latches_[fid]);
   Page &old_page = pages_[fid];
 
   page_table_.erase(old_page.page_id_);
   page_table_[page_id] = fid;
-  // page_table_lock_write.unlock();
-  // locker.unlock();
+  page_table_lock_write.unlock();
+  locker.unlock();
   // 先写脏页面后读新页面
   if (old_page.IsDirty()) {
     FlushFrame(old_page.page_id_, fid);
