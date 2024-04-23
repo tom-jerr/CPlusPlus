@@ -57,7 +57,11 @@ class ExtendibleHTableBucketPage {
    * @param max_size Max size of the bucket array
    */
   void Init(uint32_t max_size = HTableBucketArraySize(sizeof(MappingType)));
-
+  /**
+   * @brief 二分寻找key的索引
+   *
+   */
+  auto KeyIndex(const KeyType &key, const KeyComparator &cmp) const -> uint32_t;
   /**
    * Lookup a key
    *
@@ -67,7 +71,14 @@ class ExtendibleHTableBucketPage {
    * @return true if the key and value are present, false if not found.
    */
   auto Lookup(const KeyType &key, ValueType &value, const KeyComparator &cmp) const -> bool;
-
+  /**
+   * @brief 在index处插入key和value
+   *
+   * @param idx
+   * @param key
+   * @param value
+   */
+  auto InsertAt(uint32_t idx, const KeyType &key, const ValueType &value) -> void;
   /**
    * Attempts to insert a key and value in the bucket.
    *
