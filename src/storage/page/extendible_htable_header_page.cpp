@@ -21,6 +21,7 @@ void ExtendibleHTableHeaderPage::Init(uint32_t max_depth) {
   // throw NotImplementedException("ExtendibleHTableHeaderPage is not implemented");
   BUSTUB_ASSERT(max_depth <= 32, "max depth need <= 9");
   max_depth_ = max_depth;
+  std::fill(directory_page_ids_, directory_page_ids_ + MaxSize(), INVALID_PAGE_ID);
 }
 
 auto ExtendibleHTableHeaderPage::HashToDirectoryIndex(uint32_t hash) const -> uint32_t {
