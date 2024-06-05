@@ -57,7 +57,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Lookup(const K &key, V &value, const 
   }
 
   uint32_t index = KeyIndex(key, cmp);
-  if (index >= size) {
+  if (static_cast<int>(index) >= size) {
     value = {};
     return false;
   }

@@ -41,7 +41,8 @@ void ExtendibleHTableHeaderPage::SetDirectoryPageId(uint32_t directory_idx, page
 }
 
 auto ExtendibleHTableHeaderPage::MaxSize() const -> uint32_t {
-  return (1 << max_depth_) < HTABLE_HEADER_ARRAY_SIZE ? (1 << max_depth_) : HTABLE_HEADER_ARRAY_SIZE;
+  return (1 << max_depth_) < static_cast<int>(HTABLE_HEADER_ARRAY_SIZE) ? (1 << max_depth_)
+                                                                        : static_cast<int>(HTABLE_HEADER_ARRAY_SIZE);
 }
 
 }  // namespace bustub
