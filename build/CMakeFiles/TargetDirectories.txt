@@ -1,0 +1,15 @@
+/home/lzy/Workspace/C++Practice/C++20/build/CMakeFiles/edit_cache.dir
+/home/lzy/Workspace/C++Practice/C++20/build/CMakeFiles/rebuild_cache.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/auto.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/co_vs_callback.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/concept.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/concept_add.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/factory.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/maxval.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/rangessort.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/sentinell.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/timer_scheduler.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/valorcoll.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/viewspipe.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/edit_cache.dir
+/home/lzy/Workspace/C++Practice/C++20/build/src/CMakeFiles/rebuild_cache.dir
