@@ -1,0 +1,7 @@
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/build/bin)
+file(GLOB all_srcs CONFIGURE_DEPENDS *.cpp)
+foreach(v ${all_srcs})
+    get_filename_component(target_name ${v} NAME_WE)
+    add_executable(${target_name} ${v})
+    # target_link_libraries(fcoroutines)
+endforeach()
